@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EventHorizon - Live Stream</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b1120; color: #e2e8f0; padding: 0; margin: 0; }
+        
+        /* The New Navigation Bar */
+        .navbar { background: #0f172a; padding: 0 20px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; }
+        .nav-brand { font-size: 18px; font-weight: bold; color: #f8fafc; margin-right: 40px; }
+        .tab { padding: 15px 20px; color: #94a3b8; text-decoration: none; font-weight: bold; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .tab:hover { color: #e2e8f0; background: #1e293b; }
+        .tab.active { color: #38bdf8; border-bottom: 3px solid #38bdf8; background: #1e293b; }
+
+        .container { padding: 20px; }
+        
+        /* Stream Controls */
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-group { display: flex; gap: 10px; }
+        .btn { background: #38bdf8; color: #0b1120; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #0ea5e9; }
+        .btn-stop { background: #f43f5e; color: #ffffff; }
+        .btn-stop:hover { background: #e11d48; }
+
+        /* Stats & Tables */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .card { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .card span { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
+        .card b { font-size: 28px; display: block; margin-top: 5px; color: #38bdf8; }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; background: #1e293b; border-radius: 8px; overflow: hidden; border: 1px solid #334155; }
+        th { background: #0f172a; padding: 12px 15px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
+        td { padding: 12px 15px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: middle; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .site-badge { background: #334155; color: #cbd5e1; padding: 3px 6px; border-radius: 3px; font-size: 11px; }
+        
+        .act-normal { color: #94a3b8; }
+        .act-good { color: #34d399; font-weight: bold; }
+        .act-warn { color: #fbbf24; font-weight: bold; }
+        .act-crit { color: #f87171; font-weight: bold; }
+        .act-sys { color: #a78bfa; font-weight: bold; }
+        .desc { font-size: 11px; color: #64748b; display: block; margin-top: 3px; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-brand">🌍 EventHorizon</div>
+        <a href="/" class="tab">📊 Executive Dashboard</a>
+        <a href="/live_logs" class="tab active">📡 Live Simulator Stream</a>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h3 style="color: #94a3b8; margin: 0; text-transform: uppercase; font-size: 14px;">Raw Event Stream</h3>
+            <div class="btn-group">
+                <button class="btn" onclick="start()">▶ Start Live Stream</button>
+                <button class="btn btn-stop" onclick="stopStream()">⏸ Pause Stream</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="card"><span>Total Events</span><b id="total">0</b></div>
+            <div class="card"><span>Access Granted</span><b id="granted" style="color:#34d399">0</b></div>
+            <div class="card"><span>Hardware Faults</span><b id="faults" style="color:#fbbf24">0</b></div>
+            <div class="card"><span>Critical Breaches</span><b id="alerts" style="color:#f87171">0</b></div>
+        </div>
+
+        <table>
+            <thead><tr><th>Time</th><th>Site / Zone</th><th>Device / Hardware</th><th>User Identity</th><th>Action / Status</th><th>Severity</th></tr></thead>
+            <tbody id="logs"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let stats = { total: 0, granted: 0, faults: 0, alerts: 0 };
+        let source = null;
+
+        function start() {
+            if(source) source.close(); 
+            source = new EventSource("/stream");
+            
+            source.onmessage = (e) => {
+                const ev = JSON.parse(e.data);
+                stats.total++;
+                
+                if(ev.action.includes('ALLOWED')) stats.granted++;
+                if(ev.action.includes('HELD') || ev.action.includes('ABNORMAL') || ev.action.includes('OFFLINE')) stats.faults++;
+                if(ev.severity === 'CRITICAL') stats.alerts++;
+                
+                document.getElementById('total').innerText = stats.total;
+                document.getElementById('granted').innerText = stats.granted;
+                document.getElementById('faults').innerText = stats.faults;
+                document.getElementById('alerts').innerText = stats.alerts;
+
+                let actionClass = 'act-normal';
+                let actionIcon = '⚙️';
+                
+                if(ev.action === 'ENTRY_PUNCH_ALLOWED') { actionClass = 'act-good'; actionIcon = '➡️'; }
+                if(ev.action === 'EXIT_PUNCH_ALLOWED') { actionClass = 'act-good'; actionIcon = '⬅️'; }
+                if(ev.action === 'ENTRY_PUNCH_DENIED') { actionClass = 'act-warn'; actionIcon = '🚫'; }
+                if(ev.action === 'DOOR_UNLOCKED' || ev.action === 'DOOR_OPEN') { actionClass = 'act-normal'; actionIcon = '🔓'; }
+                if(ev.action === 'DOOR_CLOSED' || ev.action === 'DOOR_LOCKED') { actionClass = 'act-normal'; actionIcon = '🔒'; }
+                if(ev.action === 'DOOR_HELD_OPEN' || ev.action === 'ABNORMAL_DOOR_STATE') { actionClass = 'act-warn'; actionIcon = '⚠️'; }
+                if(ev.action === 'TAILGATING_DETECTED') { actionClass = 'act-crit'; actionIcon = '🚨'; }
+                if(ev.action === 'IMPOSSIBLE_TRAVEL_DETECTED') { actionClass = 'act-crit'; actionIcon = '✈️'; }
+                if(ev.action === 'DOOR_FORCED_OPEN') { actionClass = 'act-crit'; actionIcon = '💥'; }
+                if(ev.action === 'MOTION_DETECTED') { actionClass = 'act-sys'; actionIcon = '📹'; }
+                if(ev.action === 'DEVICE_OFFLINE') { actionClass = 'act-crit'; actionIcon = '🔌'; }
+                if(ev.action === 'DEVICE_ONLINE') { actionClass = 'act-good'; actionIcon = '🟢'; }
+
+                const row = document.getElementById('logs').insertRow(0);
+                row.innerHTML = `
+                    <td style="color:#64748b; font-family:monospace;">${new Date().toLocaleTimeString()}</td>
+                    <td><span class="site-badge">${ev.site}</span><br><span style="color:#38bdf8; font-size:12px; margin-top:4px; display:block;">${ev.zone}</span></td>
+                    <td style="color:#e2e8f0;">${ev.device_id}</td>
+                    <td style="color:#f8fafc; font-weight:500;">${ev.user_id}</td>
+                    <td><span class="${actionClass}">${actionIcon} ${ev.action.replace(/_/g,' ')}</span><span class="desc">${ev.description}</span></td>
+                    <td><span class="badge" style="background:${getCol(ev.severity)}">${ev.severity}</span></td>
+                `;
+                
+                if(document.getElementById('logs').rows.length > 50) document.getElementById('logs').deleteRow(50);
+            };
+        }
+
+        function stopStream() {
+            if(source) {
+                source.close();
+                source = null;
+            }
+        }
+
+        function getCol(s) {
+            if(s === 'CRITICAL') return '#ef4444';
+            if(s === 'HIGH') return '#f97316';
+            if(s === 'MEDIUM') return '#eab308';
+            return '#475569';
+        }
+    </script>
+</body>
+</html>
