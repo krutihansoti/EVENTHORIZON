@@ -1,18 +1,18 @@
 import aiosqlite
 import json
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 
 # 1. SECURELY INITIALIZE GEMINI
-load_dotenv() # This reads your hidden .env file
-gemini_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=gemini_key)
+load_dotenv() # This reads your .env file
+gemini_key = "AIzaSyBW0MlU19xd7wGO-8Ug6thAWG7eYjO37Nk"
 
 class ThreatIntelAgent:
     def __init__(self, db_path: str):
         self.db_path = db_path
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Initialize the modern Gemini Client
+        self.client = genai.Client(api_key=gemini_key)
 
     async def process_query(self, query: str) -> str:
         print(f"🧠 [Gemini AI] Processing NLQ: {query}")
@@ -21,7 +21,7 @@ class ThreatIntelAgent:
         context_data = {"risky_users": [], "compromised_zones": [], "failing_devices": []}
         
         try:
-            # 2. GATHER LIVE CONTEXT FROM SQLITE
+            # 2. GATHER LIVE CONTEXT FROM SQLITE (Real-Time RAG)
             async with aiosqlite.connect(self.db_path) as db:
                 db.row_factory = aiosqlite.Row
                 
@@ -56,8 +56,11 @@ class ThreatIntelAgent:
             6. DO NOT wrap your response in ```html markdown blocks. Just return the raw HTML text.
             """
             
-            # 4. ASK GEMINI
-            response = await self.model.generate_content_async(prompt)
+            # 4. ASK GEMINI (Modern SDK Method)
+            response = await self.client.aio.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
             return response.text
             
         except Exception as e:
