@@ -123,14 +123,14 @@ This means operators can ask questions like *"which zones are at risk right now"
 ![Live Event Feed](assets/LiveEventFeed.png)
 
 ### Ask AI Investigation
-![Ask AI](assets/AskAI Demo.png)
+![Ask AI](assets/AskAIDemo.png)
 
 ### Enterprise Risk Score
 ![Enterprise Risk Score](assets/EnterpriseRiskScore.png)
 
 
 ### Entity Risk Scoring
-![Entity Risk Scoring](assets/Entity Risk Score.png)
+![Entity Risk Scoring](assets/EntityRiskScore.png)
 
 ### Device Investigation
 ![Device Investigation](assets/Device_Investigation.png)
